@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Simple Voting</title>
+    <link rel="stylesheet" href="css/pico.min.css"/>
+    <script src="scripts/cash.min.js"></script>
+    <script src="scripts/dexie.min.js"></script>
+    <script src="scripts/db.js"></script>
+</head>
+
+<body>
+<main class="container">
+    <h1>Simple Voting</h1>
+    <h2>Daftar Voting</h2>
+    <div class="grid">
+        <input type="text" id="title" name="title" placeholder="Judul Voting">
+        <input type="text" id="description" name="description" placeholder="Deskripsi">
+        <input type="number" id="max-votes" name="max-votes" placeholder="Jumlah Hak Suara">
+        <button type="submit" id="save-election">Tambah</button>
+    </div>
+    <table id="elections-list">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Judul Voting</th>
+            <th>Deskripsi</th>
+            <th>Jumlah Hak Suara</th>
+            <th>Pilihan</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</main>
+
+<script>
+    function appendElection(election) {
+        $('#elections-list > tbody').append(
+            '<tr>' +
+            `<td>${election.id}</td>` +
+            `<td><a href="report.html?id=${election.id}">${election.title}</a></td>` +
+            `<td>${election.description}</td>` +
+            `<td>${election.maxVotes}</td>` +
+            '<td>' +
+            `<a href="candidate.html?id=${election.id}">Kandidat</a> | ` +
+            // `<a href="#" class="edit" data-id="${election.id}">Rubah</a> | ` +
+            `<a href="#" class="delete" data-id="${election.id}">Hapus</a>` +
+            '</td>' +
+            '</tr>'
+        );
+    }
+
+    function loadElections() {
+        db.elections.each(election => appendElection(election));
+    }
+
+    function deleteElection(id, rowElement) {
+        db.elections.delete(id)
+            .then(() => rowElement.remove())
+            .catch(err => alert("Gagal menghapus Voting: " + err));
+    }
+
+    $(function () {
+        loadElections();
+
+        $('#save-election').on('click', function () {
+            const election = {
+                title: $('#title').val(),
+                description: $('#description').val(),
+                maxVotes: $('#max-votes').val()
+            };
+            db.elections.add(election)
+                .then(electionId => {
+                    election.id = electionId;
+                    appendElection(election);
+                    $('#title').val('');
+                    $('#description').val('');
+                    $('#max-votes').val('');
+                });
+        });
+
+        $('body').on('click', '.delete', function (event) {
+            const deleteButton = $(event.target);
+            deleteElection(deleteButton.data('id'), deleteButton.parentsUntil('tbody'));
+        });
+    });
+</script>
+</body>
+
+</html>
