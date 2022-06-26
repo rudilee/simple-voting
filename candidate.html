@@ -70,7 +70,7 @@
     }
 
     function countVotes(candidateId) {
-        db.votes.where({candidateId: candidateId}).count()
+        db.votes.where({electionId: electionId, candidateId: candidateId}).count()
             .then((votes) => $(`#vote-${candidateId}`).text(votes))
             .catch((err) => console.log(err));
     }

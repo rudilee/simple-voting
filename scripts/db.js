@@ -11,3 +11,6 @@ db.version(3).stores({
     elections: '++id, title, description, maxVotes',
     candidates: '++id, name, electionId',
 });
+db.version(4).stores({
+    votes: '++id, [electionId+candidateId]'
+});
