@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Simple Voting</title>
+    <link rel="stylesheet" href="css/pico.min.css"/>
+    <script src="scripts/cash.min.js"></script>
+    <script src="scripts/dexie.min.js"></script>
+    <script src="scripts/db.js"></script>
+    <script src="scripts/common.js"></script>
+    <style>
+        article {
+            margin: 30px 0 0 0;
+            padding: 20px 30px;
+        }
+
+        article > .grid > span {
+            margin: auto 0;
+            font-size: 28px;
+        }
+
+        progress {
+            margin: auto 0;
+        }
+    </style>
+</head>
+
+<body>
+<main class="container">
+    <hgroup>
+        <h1>Judul Voting</h1>
+        <h2>Deskripsi</h2>
+    </hgroup>
+    <br>
+</main>
+
+<script>
+    const electionId = parseInt(getUrlVars()['id']);
+
+    function appendCandidate(candidate, maxVotes) {
+        $('.container').append(
+            '<article>' +
+            '<div class="grid">' +
+            `<span>${candidate.name}</span>` +
+            '<div class="votes">' +
+            `<progress id="vote-${candidate.id}" value="0" max="${maxVotes}"></progress>` +
+            `<span id="vote-number-${candidate.id}" />` +
+            '</div>' +
+            '</div>' +
+            '</article>'
+        );
+    }
+
+    $(function () {
+        db.transaction('r', db.elections, db.candidates, db.votes, function () {
+            db.elections.get(electionId)
+                .then(election => {
+                    $('h1').text(election.title);
+                    $('h2').text(election.description);
+
+                    db.candidates.where({electionId: election.id})
+                        .each((candidate) => {
+                            appendCandidate(candidate, election.maxVotes);
+
+                            Dexie.liveQuery(() => db.votes.where({
+                                electionId: electionId, candidateId: candidate.id
+                            }).count()).subscribe({
+                                next: (votes) => {
+                                    $(`#vote-${candidate.id}`).val(votes);
+                                    $(`#vote-number-${candidate.id}`).text(votes);
+                                },
+                                error: (err) => console.log(err)
+                            });
+                        });
+                });
+        });
+    });
+</script>
+</body>
+
+</html>
