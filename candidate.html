@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Daftar Kandidat</title>
+    <link rel="stylesheet" href="css/pico.min.css"/>
+    <script src="scripts/cash.min.js"></script>
+    <script src="scripts/dexie.min.js"></script>
+    <script src="scripts/db.js"></script>
+    <script src="scripts/common.js"></script>
+</head>
+
+<body>
+<main class="container">
+    <h1>Judul Voting</h1>
+    <h2>Daftar Kandidat</h2>
+    <div class="grid">
+        <input type="text" id="name" name="name" placeholder="Nama Kandidat">
+        <button type="submit" id="save-candidate">Tambah</button>
+    </div>
+    <table id="candidates-list">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nama Kandidat</th>
+            <th>Jumlah Suara</th>
+            <th>Pilihan</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</main>
+
+<script>
+    const electionId = parseInt(getUrlVars()['id']);
+
+    function appendCandidate(candidate) {
+        $('#candidates-list > tbody').append(
+            '<tr>' +
+            `<td>${candidate.id}</td>` +
+            `<td>${candidate.name}</td>` +
+            `<td id="vote-${candidate.id}">0</td>` +
+            '<td>' +
+            `<a href="#" class="vote" data-id="${candidate.id}">Beri Suara</a> | ` +
+            // `<a href="#" class="edit" data-id="${candidate.id}">Rubah</a> | ` +
+            `<a href="#" class="delete" data-id="${candidate.id}">Hapus</a>` +
+            '</td>' +
+            '</tr>'
+        );
+    }
+
+    function loadCandidates() {
+        // Create transaction to pass db.votes table, so it could be used by countVotes.
+        db.transaction('r', db.candidates, db.votes, () => {
+            db.candidates.where({electionId: electionId})
+                .each(candidate => {
+                    appendCandidate(candidate);
+                    countVotes(candidate.id);
+                });
+        });
+    }
+
+    function deleteCandidate(id, rowElement) {
+        db.candidates.delete(id)
+            .then(() => rowElement.remove())
+            .catch(err => alert("Gagal menghapus Kandidat: " + err));
+    }
+
+    function countVotes(candidateId) {
+        db.votes.where({candidateId: candidateId}).count()
+            .then((votes) => $(`#vote-${candidateId}`).text(votes))
+            .catch((err) => console.log(err));
+    }
+
+    $(function () {
+        db.elections.get(electionId)
+            .then(election => {
+                $('h1').text(election.title);
+            });
+
+        loadCandidates();
+
+        $('#save-candidate').on('click', function () {
+            const candidate = {
+                name: $('#name').val(),
+                electionId: electionId
+            };
+            db.candidates.add(candidate)
+                .then(candidateId => {
+                    candidate.id = candidateId;
+                    appendCandidate(candidate);
+                    $('#name').val('');
+                });
+        })
+
+        $('body').on('click', '.delete', function (event) {
+            const deleteButton = $(event.target);
+            deleteCandidate(deleteButton.data('id'), deleteButton.parentsUntil('tbody'));
+        }).on('click', '.vote', function (event) {
+            const candidateId = $(event.target).data('id');
+            db.votes.add({electionId: electionId, candidateId: candidateId})
+                .then(() => countVotes(candidateId));
+        });
+    });
+</script>
+</body>
+
+</html>
